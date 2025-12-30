@@ -2,6 +2,7 @@ from hypothesis import given, strategies as st
 import numpy as np
 import xarray as xr
 from corduroy.DEM import compute_terrain
+from corduroy.types import Slope
 import xproj  # noqa ignore
 
 
@@ -34,11 +35,10 @@ maybe_nan_floats = st.one_of(
     elevations=st.lists(maybe_nan_floats, min_size=25, max_size=25),
 )
 def test_terrain_nan_propagation(res, elevations):
-    """Test that NaN work"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 
-    result = compute_terrain(da, mode="slope", resolution=res, crs=da.proj.crs)
+    result = compute_terrain(da, mode=Slope(), resolution=res, crs=da.proj.crs)
 
     assert np.all(np.isfinite(result) | np.isnan(result))
 
@@ -55,7 +55,6 @@ def test_terrain_nan_propagation(res, elevations):
     )
 )
 def test_slope_rotation_invariance(elevations):
-    """Slope magnitude should be invariant to 180° rotation"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 
@@ -146,7 +145,6 @@ def test_flat_surface_zero_slope(elevations):
     gradient=st.floats(min_value=0.1, max_value=10),
 )
 def test_linear_ramp_constant_slope(base, gradient):
-    """A perfect linear ramp should have constant slope in interior"""
     x = np.arange(5)
     y = np.arange(5)
     xx, yy = np.meshgrid(x, y)
@@ -166,7 +164,6 @@ def test_linear_ramp_constant_slope(base, gradient):
     )
 )
 def test_slope_bounds(elevations):
-    """slope should be between 0 and 90 deg"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 
@@ -186,7 +183,6 @@ def test_slope_bounds(elevations):
     scale=st.floats(min_value=2, max_value=5),
 )
 def test_resolution_scaling(elevations, res1, scale):
-    """Slopes should decreaes if we increase resolution"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 
@@ -205,7 +201,6 @@ def test_resolution_scaling(elevations, res1, scale):
     )
 )
 def test_hillshade_bounds(elevations):
-    """Hillshade values should be bounded from 0-255 or 0-1"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 
@@ -214,7 +209,7 @@ def test_hillshade_bounds(elevations):
     valid_values = hillshade.values[np.isfinite(hillshade.values)]
     if len(valid_values) > 0:
         assert np.all(valid_values >= 0)
-        assert np.all(valid_values <= 255)
+        assert np.all(valid_values <= 1.0)
 
 
 @given(
@@ -225,7 +220,6 @@ def test_hillshade_bounds(elevations):
     altitude=st.floats(min_value=0, max_value=90),
 )
 def test_hillshade_with_parameters(elevations, azimuth, altitude):
-    """Can we adjust hillshade params"""
     data = np.array(elevations).reshape((5, 5))
     da = make_geo_da(data)
 

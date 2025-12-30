@@ -1,13 +1,14 @@
-from typing import Literal
+from typing import Optional, Any
 import numpy as np
 import xarray as xr
+from .types import ModeType, Hillshade
 
 
 def _terrain_kernel(
     data: np.ndarray,
     res_x: float,
     res_y: float,
-    mode: Literal["slope", "aspect", "hillshade"],
+    mode: str,
     z_factor: float = 1.0,
     azimuth: float = 315.0,
     altitude: float = 45.0,
@@ -49,9 +50,9 @@ def _terrain_kernel(
 
 def compute_terrain(
     obj: xr.DataArray,
-    mode: Literal["slope", "aspect", "hillshade"],
-    resolution: float | int | tuple | None = None,
-    crs=None,
+    mode: ModeType,
+    resolution: Optional[float | int | tuple] = None,
+    crs: Any = None,
     x_dim: str = "x",
     y_dim: str = "y",
     **kwargs,
@@ -85,9 +86,12 @@ def compute_terrain(
         **kwargs,
         "res_x": abs(res_x),
         "res_y": abs(res_y),
-        "mode": mode,
+        "mode": mode.name,
         "z_factor": z_factor,
     }
+
+    if isinstance(mode, Hillshade):
+        kernel_kwargs.update({"azimuth": mode.azimuth, "altitude": mode.altitude})
 
     if obj.chunks is not None:
         out_data = obj.data.map_overlap(
@@ -103,5 +107,9 @@ def compute_terrain(
         out_data = _terrain_kernel(padded, **kernel_kwargs)  # type: ignore[invalid-argument-type]
 
     return xr.DataArray(
-        out_data, coords=obj.coords, dims=obj.dims, name=mode, attrs=obj.attrs
+        out_data,
+        coords=obj.coords,
+        dims=obj.dims,
+        name=mode.name,
+        attrs={**obj.attrs, "units": mode.units, "long_name": mode.long_name},
     )

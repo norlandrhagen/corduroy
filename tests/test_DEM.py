@@ -3,7 +3,7 @@ import corduroy  # noqa ignore
 
 
 def test_dimension_auto_discovery(dem_factory):
-    """Test that corduroy finds 'longitude' and 'latitude' automatically."""
+    """Test that corduroy finds 'longitude' and 'latitude' automagically"""
     da = dem_factory(x_name="longitude", y_name="latitude")
 
     slp = da.dem.slope()
@@ -70,7 +70,7 @@ def test_dateline_jump(dem_factory):
 
 
 def test_explicit_dimension_mapping(dem_factory):
-    """Test that manually providing x and y names the auto discovery"""
+    """Test that manually providing x and y works"""
     da = dem_factory(x_name="east", y_name="north")
 
     slp = da.dem.slope(x="east", y="north")

@@ -25,9 +25,28 @@ ds = xr.open_dataset("DEM.zarr", engine="zarr", chunks="auto")
 ds = ds.proj.assign_crs("EPSG:4326")
 
 # Calculate hillshade. Note you can use the `dem` accessor.
-hs = ds['dem'].dem.hillshade()
+hillshade = ds['dem'].dem.hillshade()
+slope = ds['dem'].dem.slope()
+aspect = ds['dem'].dem.aspect()
 
-hs['dem'].plot()
+
+# Plotting
+fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharex=True, sharey=True)
+
+ds['dem'].plot(ax=axes[0, 0], cmap='terrain', add_colorbar=True)
+axes[0, 0].set_title("Input DEM")
+
+slope.plot(ax=axes[0, 1], cmap='magma')
+axes[0, 1].set_title("Slope")
+
+aspect.plot(ax=axes[1, 0], cmap='twilight')
+axes[1, 0].set_title("Aspect")
+
+hillshade.plot(ax=axes[1, 1], cmap='gray')
+axes[1, 1].set_title("Hillshade")
+
+plt.tight_layout()
+
 ```
 
 
