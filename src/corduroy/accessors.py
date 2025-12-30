@@ -9,13 +9,13 @@ class DEMDataArrayAccessor:
     def __init__(self, xarray_obj: xr.DataArray):
         self._obj = xarray_obj
 
-    def _discover_dims(self, x: Optional[str], y: Optional[str]):
+    def _discover_dims(self, x: Optional[str], y: Optional[str]) -> tuple[str, str]:
         x_options = ["x", "lon", "longitude", "long"]
         y_options = ["y", "lat", "latitude"]
 
         dims = self._obj.dims
-        final_x = x or next((d for d in dims if d.lower() in x_options), "x")
-        final_y = y or next((d for d in dims if d.lower() in y_options), "y")
+        final_x = x or next((d for d in dims if d.lower() in x_options), "x")  # type: ignore
+        final_y = y or next((d for d in dims if d.lower() in y_options), "y")  # type: ignore
 
         return final_x, final_y
 
@@ -89,7 +89,7 @@ class DEMDatasetAccessor:
 
         common_names = ["elevation", "dem", "height", "z"]
         for var in self._obj.data_vars:
-            if var.lower() in common_names:
+            if var.lower() in common_names:  # type: ignore
                 return self._obj[var].dem
 
         spatial_vars = [v for v in self._obj.data_vars if self._obj[v].ndim >= 2]

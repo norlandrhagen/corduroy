@@ -49,7 +49,7 @@ def _terrain_kernel(
 
 def compute_terrain(
     obj: xr.DataArray,
-    mode: str,
+    mode: Literal["slope", "aspect", "hillshade"],
     resolution: float | int | tuple | None = None,
     crs=None,
     x_dim: str = "x",
@@ -100,7 +100,7 @@ def compute_terrain(
         )
     else:
         padded = np.pad(obj.data, pad_width=1, mode="edge")
-        out_data = _terrain_kernel(padded, **kernel_kwargs)
+        out_data = _terrain_kernel(padded, **kernel_kwargs)  # type: ignore[invalid-argument-type]
 
     return xr.DataArray(
         out_data, coords=obj.coords, dims=obj.dims, name=mode, attrs=obj.attrs
