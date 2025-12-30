@@ -12,3 +12,6 @@ wheels/
 
 *.hypothesis
 *.pytest_cache
+
+
+*.ipynb
