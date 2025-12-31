@@ -13,6 +13,24 @@ def _terrain_kernel(
     azimuth: float = 315.0,
     altitude: float = 45.0,
 ) -> np.ndarray:
+    """
+    Compute terrain analysis using a 3x3 kernel.
+
+    Calculates slope, aspect, or hillshade from elevation data using
+    finite differences to estimate gradients.
+
+    Args:
+        data: 2D elevation array with 1-pixel padding
+        res_x: Cell size in x direction
+        res_y: Cell size in y direction
+        mode: Terrain mode ('slope', 'aspect', or 'hillshade')
+        z_factor: Vertical exaggeration factor
+        azimuth: Light source azimuth in degrees (0-360)
+        altitude: Light source altitude in degrees (0-90)
+
+    Returns:
+        Computed terrain array (slope in degrees, aspect in degrees, or hillshade 0-1)
+    """
     z = data * z_factor
 
     res_x = res_x if res_x != 0 else 1e-9
@@ -49,7 +67,7 @@ def _terrain_kernel(
 
 
 def compute_terrain(
-    obj: xr.DataArray,
+    da: xr.DataArray,
     mode: ModeType,
     resolution: Optional[float | int | tuple] = None,
     crs: Any = None,
@@ -57,12 +75,27 @@ def compute_terrain(
     y_dim: str = "y",
     **kwargs,
 ) -> xr.DataArray:
-    x_coords = obj[x_dim]
-    y_coords = obj[y_dim]
+    """
+    Compute terrain analysis from elevation DataArray.
+
+    Args:
+        da: Input elevation DataArray
+        mode: Terrain mode (Slope, Aspect, or Hillshade instance)
+        resolution: Cell size as scalar or (y_res, x_res). Auto-detected if None
+        crs: Coordinate reference system for geographic z-factor adjustment
+        x_dim: Name of x dimension
+        y_dim: Name of y dimension
+        **kwargs: Additional arguments passed to terrain kernel (e.g., z_factor)
+
+    Returns:
+        DataArray with computed terrain values and updated metadata
+    """
+    x_coords = da[x_dim]
+    y_coords = da[y_dim]
 
     if resolution is None:
-        if hasattr(obj, "rio") and obj.rio.resolution() is not None:
-            res_y, res_x = obj.rio.resolution()
+        if hasattr(da, "rio") and da.rio.resolution() is not None:
+            res_y, res_x = da.rio.resolution()
         else:
             dx = np.diff(x_coords)
             dx = np.where(np.abs(dx) > 180, 360 - np.abs(dx), dx)
@@ -93,8 +126,8 @@ def compute_terrain(
     if isinstance(mode, Hillshade):
         kernel_kwargs.update({"azimuth": mode.azimuth, "altitude": mode.altitude})
 
-    if obj.chunks is not None:
-        out_data = obj.data.map_overlap(
+    if da.chunks is not None:
+        out_data = da.data.map_overlap(
             _terrain_kernel,
             depth=1,
             boundary="nearest",
@@ -103,13 +136,13 @@ def compute_terrain(
             **kernel_kwargs,
         )
     else:
-        padded = np.pad(obj.data, pad_width=1, mode="edge")
+        padded = np.pad(da.data, pad_width=1, mode="edge")
         out_data = _terrain_kernel(padded, **kernel_kwargs)  # type: ignore[invalid-argument-type]
 
     return xr.DataArray(
         out_data,
-        coords=obj.coords,
-        dims=obj.dims,
+        coords=da.coords,
+        dims=da.dims,
         name=mode.name,
-        attrs={**obj.attrs, "units": mode.units, "long_name": mode.long_name},
+        attrs={**da.attrs, "units": mode.units, "long_name": mode.long_name},
     )
