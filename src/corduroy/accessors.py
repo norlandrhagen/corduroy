@@ -86,7 +86,7 @@ class DEMDatasetAccessor:
         if name:
             return self._obj[name].dem
 
-        common_names = ["elevation", "dem", "height", "z"]
+        common_names = ["elevation", "dem", "height", "z", "band_data"]
         found_common = [v for v in self._obj.data_vars if _is_match(v, common_names)]
 
         if len(found_common) == 1:
