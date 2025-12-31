@@ -22,7 +22,7 @@ An example notebook can be found in `notebooks/DEM_example.ipynb`
 #### Example
 ```python
 import xarray as xr
-import xcorduroy # This is needed for the .dem accessor
+import corduroy # This is needed for the .dem accessor
 import xproj # This is needed for the .proj accessor
 
 # Load a 2D Raster DEM

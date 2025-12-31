@@ -38,10 +38,10 @@ jobs:
           subject-path: 'dist/*'
       
       - name: Smoke test (wheel)
-        run: uv run --isolated --no-project --with dist/*.whl -- python -c "import xcorduroy; print(xcorduroy.__version__)"
+        run: uv run --isolated --no-project --with dist/*.whl -- python -c "import corduroy; print(corduroy.__version__)"
       
       - name: Smoke test (source distribution)
-        run: uv run --isolated --no-project --with dist/*.tar.gz -- python -c "import xcorduroy; print(xcorduroy.__version__)"
+        run: uv run --isolated --no-project --with dist/*.tar.gz -- python -c "import corduroy; print(corduroy.__version__)"
       
       - name: Publish
         run: uv publish
