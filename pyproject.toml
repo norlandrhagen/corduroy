@@ -1,5 +1,5 @@
 [project]
-name = "corduroy"
+name = "xcorduroy"
 version = "0.0.1"
 
 description = "Dask aware lightweight DEM utilities for Xarray"
