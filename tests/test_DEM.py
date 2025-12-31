@@ -1,5 +1,5 @@
 import numpy as np
-import corduroy  # noqa ignore
+import xcorduroy  # noqa ignore
 
 
 def test_dimension_auto_discovery(dem_factory):
