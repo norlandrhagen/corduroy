@@ -1,5 +1,7 @@
 # Corduroy - Dask aware lightweight DEM utilities for Xarray
 
+Corduroy is a lightweight [`dask`, `numpy`, `xarray` and `xproj`] Xarray accessor for library for calculating hillshade, slope angle and aspects from DEMs. 
+
 ** Warning: experimental**
 
 
@@ -13,6 +15,11 @@ uv add "corduroy @ git+https://github.com/norlandrhagen/corduroy"
 pip install "git+https://github.com/norlandrhagen/corduroy"
 ```
 
+#### Notebooks
+An example notebook can be found in `notebooks/DEM_example.ipynb`
+
+
+#### Example
 ```python
 import xarray as xr
 import corduroy # This is needed for the .dem accessor
@@ -50,9 +57,13 @@ plt.tight_layout()
 ```
 
 
+### Methods
+The three current methods implemented are `.hillshade()`, `.slope()` and `.aspect()`.  The hillshade method is based off of the `Horn, 1981` method. Details can be found in `src/corduroy/DEM.py`. They are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
+
 ## Development
 
 This project uses `uv` for dependency management, `pytest` and `hypothesis` for testing,  `ty` for type-checking and `ruff` for linting. 
+
 
 ### Sync development environment 
 
@@ -76,3 +87,8 @@ uv run pre-commit run all-files
 ```
 uv run pytest tests/
 ```
+
+
+#### What's in the name
+
+Corduroy is a textured snow surface left by groomers that forms regular peaks and valleys. 
