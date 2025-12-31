@@ -10,9 +10,9 @@
 #### Installation
 
 ```python
-uv add "xcorduroy @ git+https://github.com/norlandrhagen/corduroy"
+uv add xcorduroy
 # or 
-pip install "git+https://github.com/norlandrhagen/corduroy"
+pip install xcorduroy
 ```
 
 #### Notebooks
