@@ -1,6 +1,6 @@
 # xCorduroy - Dask aware lightweight DEM utilities for Xarray
 
-`xcorduroy` is a lightweight [`dask`, `numpy`, `xarray` and `xproj`] Xarray accessor for library for calculating hillshade, slope angle and aspects from DEMs. 
+`xcorduroy` is a lightweight (`dask`, `numpy`, `xarray` and `xproj`) Xarray accessor for library for calculating hillshade, slope angle and aspects from DEMs. 
 
 ** Warning: experimental**
 
