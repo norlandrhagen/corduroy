@@ -1,6 +1,6 @@
 # based on this astral / uv example: https://docs.astral.sh/uv/guides/integration/github/#publishing-to-pypi
 
-name: Publish
+name: publish to pypi
 
 on:
   push:
