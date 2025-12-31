@@ -2,7 +2,7 @@ import pytest
 import xarray as xr
 import numpy as np
 import xproj  # noqa ignore
-import corduroy  # noqa ignore
+import xcorduroy  # noqa ignore
 
 
 def test_missing_crs_raises_error():

@@ -1,6 +1,6 @@
 import pytest
 import xarray as xr
-import corduroy  # noqa ignore
+import xcorduroy  # noqa ignore
 
 
 def test_dataset_auto_discovery(synthetic_dem):

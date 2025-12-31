@@ -1,9 +1,9 @@
 import numpy as np
-import corduroy  # noqa ignore
+import xcorduroy  # noqa ignore
 
 
 def test_dimension_auto_discovery(dem_factory):
-    """Test that corduroy finds 'longitude' and 'latitude' automagically"""
+    """Test that xcorduroy finds 'longitude' and 'latitude' automagically"""
     da = dem_factory(x_name="longitude", y_name="latitude")
 
     slp = da.dem.slope()
