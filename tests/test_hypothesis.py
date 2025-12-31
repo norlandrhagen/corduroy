@@ -1,8 +1,8 @@
 from hypothesis import given, strategies as st
 import numpy as np
 import xarray as xr
-from corduroy.DEM import compute_terrain
-from corduroy.types import Slope
+from xcorduroy.DEM import compute_terrain
+from xcorduroy.types import Slope
 import xproj  # noqa ignore
 
 
