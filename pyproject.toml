@@ -29,5 +29,7 @@ dev = [
 
 
 
+
+
 [tool.ty.src]
-exclude = ["*.ipynb"]
+exclude = ["**/notebooks/"]
