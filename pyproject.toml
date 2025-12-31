@@ -1,6 +1,6 @@
 [project]
 name = "corduroy"
-version = "0.0.1-alpha.0"
+version = "0.0.1"
 
 description = "Dask aware lightweight DEM utilities for Xarray"
 readme = "README.md"

@@ -61,7 +61,7 @@ wheels = [
 
 [[package]]
 name = "corduroy"
-version = "0.0.1a0"
+version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "dask" },
