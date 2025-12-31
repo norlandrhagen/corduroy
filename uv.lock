@@ -60,47 +60,6 @@ wheels = [
 ]
 
 [[package]]
-name = "corduroy"
-version = "0.0.1"
-source = { editable = "." }
-dependencies = [
-    { name = "dask" },
-    { name = "numpy" },
-    { name = "xarray" },
-    { name = "xproj" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "hypothesis" },
-    { name = "ipdb" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-xdist" },
-    { name = "ruff" },
-    { name = "ty" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "dask", specifier = ">=2025.12.0" },
-    { name = "numpy", specifier = ">=2.1.0" },
-    { name = "xarray", specifier = ">=2025.12.0" },
-    { name = "xproj", specifier = ">=0.2.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "hypothesis", specifier = ">=6.148.8" },
-    { name = "ipdb", specifier = ">=0.13.13" },
-    { name = "pre-commit", specifier = ">=4.5.1" },
-    { name = "pytest", specifier = ">=9.0.2" },
-    { name = "pytest-xdist", specifier = ">=3.8.0" },
-    { name = "ruff", specifier = ">=0.14.10" },
-    { name = "ty", specifier = ">=0.0.8" },
-]
-
-[[package]]
 name = "dask"
 version = "2025.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -774,6 +733,47 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d3/af/7b945f331ba8911fdfff2fdfa092763156119f124be1ba4144615c540222/xarray-2025.12.0.tar.gz", hash = "sha256:73f6a6fadccc69c4d45bdd70821a47c72de078a8a0313ff8b1e97cd54ac59fed", size = 3082244, upload-time = "2025-12-05T21:51:22.432Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d5/e4/62a677feefde05b12a70a4fc9bdc8558010182a801fbcab68cb56c2b0986/xarray-2025.12.0-py3-none-any.whl", hash = "sha256:9e77e820474dbbe4c6c2954d0da6342aa484e33adaa96ab916b15a786181e970", size = 1381742, upload-time = "2025-12-05T21:51:20.841Z" },
+]
+
+[[package]]
+name = "xcorduroy"
+version = "0.0.1"
+source = { editable = "." }
+dependencies = [
+    { name = "dask" },
+    { name = "numpy" },
+    { name = "xarray" },
+    { name = "xproj" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "hypothesis" },
+    { name = "ipdb" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-xdist" },
+    { name = "ruff" },
+    { name = "ty" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "dask", specifier = ">=2025.12.0" },
+    { name = "numpy", specifier = ">=2.1.0" },
+    { name = "xarray", specifier = ">=2025.12.0" },
+    { name = "xproj", specifier = ">=0.2.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "hypothesis", specifier = ">=6.148.8" },
+    { name = "ipdb", specifier = ">=0.13.13" },
+    { name = "pre-commit", specifier = ">=4.5.1" },
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "ruff", specifier = ">=0.14.10" },
+    { name = "ty", specifier = ">=0.0.8" },
 ]
 
 [[package]]
