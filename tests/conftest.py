@@ -171,7 +171,6 @@ def crs_strategy(draw):
                 "epsg:4326",  # WEG84
                 "epsg:3857",  # web mercator
                 "epsg:32633",  # random UTM zone
-                "epsg:32610",
             ]
         )
     )

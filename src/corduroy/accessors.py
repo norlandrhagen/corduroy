@@ -5,7 +5,7 @@ from .types import Slope, Aspect, Hillshade
 
 
 def _is_match(name: Hashable, options: Iterable[str]) -> bool:
-    """Helper to safely check if a dimension/variable matches a string list."""
+    """Check if var name is a string"""
     return isinstance(name, str) and name.lower() in options
 
 
@@ -33,8 +33,7 @@ class DEMDataArrayAccessor:
 
         if crs is None:
             raise ValueError(
-                "Corduroy Error: No CRS found on DataArray. "
-                "Terrain operations require a CRS for accurate scaling."
+                "No CRS found on DataArray. You can assign a crs with: import xproj; ds.proj.assign_crs(spatial_ref='EPSG:4326', allow_override=True)"
             )
         return crs
 
@@ -87,7 +86,6 @@ class DEMDatasetAccessor:
         if name:
             return self._obj[name].dem
 
-        # 1. Search by common names
         common_names = ["elevation", "dem", "height", "z"]
         found_common = [v for v in self._obj.data_vars if _is_match(v, common_names)]
 
@@ -98,7 +96,6 @@ class DEMDatasetAccessor:
                 "multiple variables found. Specify variable: ds['elevation'].dem.slope()"
             )
 
-        # 2. Fallback: Search by dimensionality
         spatial_vars = [v for v in self._obj.data_vars if self._obj[v].ndim >= 2]
         if len(spatial_vars) == 1:
             return self._obj[spatial_vars[0]].dem
@@ -107,7 +104,6 @@ class DEMDatasetAccessor:
                 "multiple variables found. Specify variable: ds['elevation'].dem.slope()"
             )
 
-        # 3. No match found
         raise AttributeError("Could not id an elevation var. Try name='variable_name'")
 
     def slope(self, **kwargs):
