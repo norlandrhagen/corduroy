@@ -8,7 +8,7 @@ import corduroy  # noqa ignore
 def test_missing_crs_raises_error():
     da = xr.DataArray(np.zeros((5, 5)), dims=("y", "x"))
 
-    with pytest.raises(ValueError, match="Corduroy Error: No CRS found"):
+    with pytest.raises(ValueError, match="No CRS found on DataArray"):
         _ = da.dem.slope()
 
 
