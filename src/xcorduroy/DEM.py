@@ -1,7 +1,10 @@
-from typing import Optional, Any
+from typing import Any
 import numpy as np
 import xarray as xr
 from .types import ModeType, Hillshade
+
+# Metres per degree of latitude (WGS84 mean).
+_M_PER_DEG = 111320.0
 
 
 def _terrain_kernel(
@@ -12,115 +15,140 @@ def _terrain_kernel(
     z_factor: float = 1.0,
     azimuth: float = 315.0,
     altitude: float = 45.0,
+    x_sign: float = 1.0,
+    y_sign: float = 1.0,
 ) -> np.ndarray:
     """
-    Compute terrain analysis using a 3x3 kernel.
+    Compute slope, aspect or hillshade from a 1-pixel-padded 2D elevation array.
 
-    Calculates slope, aspect, or hillshade from elevation data using
-    finite differences to estimate gradients.
+    Gradients use the Horn (1981) 3x3 kernel. Aspect and hillshade follow the
+    ESRI/GDAL conventions: aspect is the downslope compass direction in degrees
+    clockwise from north (flat cells are NaN); hillshade is
+    ``cos(zenith)cos(slope) + sin(zenith)sin(slope)cos(az - aspect)`` clipped to 0-1.
 
     Args:
-        data: 2D elevation array with 1-pixel padding
-        res_x: Cell size in x direction
-        res_y: Cell size in y direction
-        mode: Terrain mode ('slope', 'aspect', or 'hillshade')
+        data: 2D elevation array with 1-pixel padding, rows along y, columns along x
+        res_x: Cell size along x, in the same units as elevation
+        res_y: Cell size along y, in the same units as elevation
+        mode: 'slope', 'aspect' or 'hillshade'
         z_factor: Vertical exaggeration factor
-        azimuth: Light source azimuth in degrees (0-360)
-        altitude: Light source altitude in degrees (0-90)
+        azimuth: Light source azimuth in degrees clockwise from north
+        altitude: Light source altitude above the horizon in degrees
+        x_sign: +1 if x increases with column index (eastward), else -1
+        y_sign: +1 if y increases with row index (northward), else -1
 
     Returns:
-        Computed terrain array (slope in degrees, aspect in degrees, or hillshade 0-1)
+        float32 array of slope (degrees), aspect (degrees) or hillshade (0-1)
     """
     z = data * z_factor
 
     res_x = res_x if res_x != 0 else 1e-9
     res_y = res_y if res_y != 0 else 1e-9
 
-    dz_dx = (
+    # Gradient toward increasing column / row index.
+    dz_dcol = (
         (z[0:-2, 2:] + 2 * z[1:-1, 2:] + z[2:, 2:])
         - (z[0:-2, 0:-2] + 2 * z[1:-1, 0:-2] + z[2:, 0:-2])
     ) / (8.0 * res_x)
-
-    dz_dy = (
-        (z[0:-2, 0:-2] + 2 * z[0:-2, 1:-1] + z[0:-2, 2:])
-        - (z[2:, 0:-2] + 2 * z[2:, 1:-1] + z[2:, 2:])
+    dz_drow = (
+        (z[2:, 0:-2] + 2 * z[2:, 1:-1] + z[2:, 2:])
+        - (z[0:-2, 0:-2] + 2 * z[0:-2, 1:-1] + z[0:-2, 2:])
     ) / (8.0 * res_y)
 
+    # Gradient positive eastward / northward regardless of array orientation.
+    dz_dx = x_sign * dz_dcol
+    dz_dy = y_sign * dz_drow
+
+    magnitude = np.hypot(dz_dx, dz_dy)
+
     if mode == "slope":
-        magnitude = np.hypot(dz_dx, dz_dy)
         return np.rad2deg(np.arctan(magnitude)).astype(np.float32)
 
     if mode == "aspect":
-        aspect = np.rad2deg(np.arctan2(dz_dy, -dz_dx))
-        return np.mod(450 - aspect, 360).astype(np.float32)
+        # Compass bearing of the downslope vector (-dz_dx, -dz_dy).
+        aspect = np.mod(np.rad2deg(np.arctan2(-dz_dx, -dz_dy)), 360.0)
+        aspect = np.where(magnitude == 0, np.nan, aspect)
+        return aspect.astype(np.float32)
 
-    az_rad = np.deg2rad(360.0 - azimuth)
-    alt_rad = np.deg2rad(altitude)
-    slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
-    aspect_rad = np.arctan2(-dz_dx, dz_dy)
+    zenith_rad = np.deg2rad(90.0 - altitude)
+    az_math_rad = np.deg2rad(np.mod(360.0 - azimuth + 90.0, 360.0))
+    slope_rad = np.arctan(magnitude)
+    # Math angle (counter-clockwise from east) of the downslope vector.
+    aspect_math_rad = np.arctan2(-dz_dy, -dz_dx)
 
-    shaded = np.sin(alt_rad) * np.cos(slope_rad) + np.cos(alt_rad) * np.sin(
+    shaded = np.cos(zenith_rad) * np.cos(slope_rad) + np.sin(zenith_rad) * np.sin(
         slope_rad
-    ) * np.cos(az_rad - aspect_rad)
+    ) * np.cos(az_math_rad - aspect_math_rad)
 
     return np.clip(shaded, 0, 1).astype(np.float32)
+
+
+def _coord_step(coords: np.ndarray, wrap_360: bool) -> float:
+    """Signed median spacing of a 1D coordinate array."""
+    d = np.diff(coords.astype(float))
+    if wrap_360:
+        d = np.where(np.abs(d) > 180, d - 360 * np.sign(d), d)
+    return float(np.median(d))
 
 
 def compute_terrain(
     da: xr.DataArray,
     mode: ModeType,
-    resolution: Optional[float | int | tuple] = None,
+    resolution: float | int | tuple[float, float] | None = None,
     crs: Any = None,
     x_dim: str = "x",
     y_dim: str = "y",
-    **kwargs,
+    **kwargs: Any,
 ) -> xr.DataArray:
     """
-    Compute terrain analysis from elevation DataArray.
+    Compute terrain analysis from a 2D elevation DataArray.
 
     Args:
-        da: Input elevation DataArray
+        da: Input elevation DataArray with dims ``y_dim`` and ``x_dim``
         mode: Terrain mode (Slope, Aspect, or Hillshade instance)
-        resolution: Cell size as scalar or (y_res, x_res). Auto-detected if None
-        crs: Coordinate reference system for geographic z-factor adjustment
+        resolution: Cell size as scalar or (y_res, x_res) in elevation units.
+            Derived from coordinates if None. For geographic CRSs the degree
+            spacing is converted to metres using the mean latitude.
+        crs: pyproj-like CRS with ``is_geographic``. Used for degree-to-metre scaling
         x_dim: Name of x dimension
         y_dim: Name of y dimension
-        **kwargs: Additional arguments passed to terrain kernel (e.g., z_factor)
+        **kwargs: Passed to the kernel (e.g. ``z_factor`` vertical exaggeration)
 
     Returns:
-        DataArray with computed terrain values and updated metadata
+        DataArray with computed terrain values
     """
-    x_coords = da[x_dim]
-    y_coords = da[y_dim]
+    if da.ndim != 2:
+        raise ValueError(f"Expected a 2D DataArray, got dims {da.dims}")
+    da = da.transpose(y_dim, x_dim)
+
+    x_coords = da[x_dim].values
+    y_coords = da[y_dim].values
+    is_geographic = bool(crs is not None and getattr(crs, "is_geographic", False))
+
+    dx = _coord_step(x_coords, wrap_360=is_geographic)
+    dy = _coord_step(y_coords, wrap_360=False)
+    x_sign = -1.0 if dx < 0 else 1.0
+    y_sign = -1.0 if dy < 0 else 1.0
 
     if resolution is None:
-        if hasattr(da, "rio") and da.rio.resolution() is not None:
-            res_y, res_x = da.rio.resolution()
-        else:
-            dx = np.diff(x_coords)
-            dx = np.where(np.abs(dx) > 180, 360 - np.abs(dx), dx)
-            res_x = float(np.abs(np.median(dx)))
-            res_y = float(np.abs(np.median(np.diff(y_coords))))
+        res_x, res_y = abs(dx), abs(dy)
+        if is_geographic:
+            mean_lat = float(np.mean(y_coords))
+            res_x *= _M_PER_DEG * np.cos(np.deg2rad(mean_lat))
+            res_y *= _M_PER_DEG
+    elif isinstance(resolution, (int, float)):
+        res_y = res_x = abs(float(resolution))
     else:
-        if isinstance(resolution, (int, float)):
-            res_y = res_x = float(resolution)
-        else:
-            res_y, res_x = float(resolution[0]), float(resolution[1])
-
-    z_factor = kwargs.pop("z_factor", None)
-    if z_factor is None:
-        if crs and crs.is_geographic:
-            mean_lat = float(y_coords.mean())
-            z_factor = 1.0 / (111320.0 * np.cos(np.deg2rad(mean_lat)))
-        else:
-            z_factor = 1.0
+        res_y, res_x = abs(float(resolution[0])), abs(float(resolution[1]))
 
     kernel_kwargs = {
+        "z_factor": 1.0,
         **kwargs,
-        "res_x": abs(res_x),
-        "res_y": abs(res_y),
+        "res_x": res_x,
+        "res_y": res_y,
         "mode": mode.name,
-        "z_factor": z_factor,
+        "x_sign": x_sign,
+        "y_sign": y_sign,
     }
 
     if isinstance(mode, Hillshade):
@@ -144,5 +172,5 @@ def compute_terrain(
         coords=da.coords,
         dims=da.dims,
         name=mode.name,
-        attrs={**da.attrs, "units": mode.units, "long_name": mode.long_name},
+        attrs={"units": mode.units, "long_name": mode.long_name},
     )

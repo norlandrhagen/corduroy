@@ -1,7 +1,9 @@
-from typing import Optional, Tuple, Hashable, Iterable, Any
+from typing import Any, Hashable, Iterable
 import xarray as xr
 from .DEM import compute_terrain
 from .types import Slope, Aspect, Hillshade
+
+Resolution = float | int | tuple[float, float] | None
 
 
 def _is_match(name: Hashable, options: Iterable[str]) -> bool:
@@ -21,7 +23,7 @@ class DEMDataArrayAccessor:
     def __init__(self, xarray_obj: xr.DataArray):
         self._obj = xarray_obj
 
-    def _discover_dims(self, x: Optional[str], y: Optional[str]) -> Tuple[str, str]:
+    def _discover_dims(self, x: str | None, y: str | None) -> tuple[str, str]:
         """
         Auto-detect x and y dimension names from common conventions.
 
@@ -63,7 +65,13 @@ class DEMDataArrayAccessor:
             )
         return crs
 
-    def slope(self, x=None, y=None, resolution=None, **kwargs):
+    def slope(
+        self,
+        x: str | None = None,
+        y: str | None = None,
+        resolution: Resolution = None,
+        **kwargs: Any,
+    ) -> xr.DataArray:
         """
         Compute slope in degrees.
 
@@ -87,9 +95,15 @@ class DEMDataArrayAccessor:
             **kwargs,
         )
 
-    def aspect(self, x=None, y=None, resolution=None, **kwargs):
+    def aspect(
+        self,
+        x: str | None = None,
+        y: str | None = None,
+        resolution: Resolution = None,
+        **kwargs: Any,
+    ) -> xr.DataArray:
         """
-        Compute aspect in degrees (0-360).
+        Compute aspect: downslope direction in degrees clockwise from north (0-360). Flat cells are NaN.
 
         Args:
             x: X dimension name (auto-detected if None)
@@ -112,8 +126,14 @@ class DEMDataArrayAccessor:
         )
 
     def hillshade(
-        self, x=None, y=None, resolution=None, azimuth=315.0, altitude=45.0, **kwargs
-    ):
+        self,
+        x: str | None = None,
+        y: str | None = None,
+        resolution: Resolution = None,
+        azimuth: float = 315.0,
+        altitude: float = 45.0,
+        **kwargs: Any,
+    ) -> xr.DataArray:
         """
         Compute hillshade (0-1 shaded relief).
 
@@ -153,7 +173,7 @@ class DEMDatasetAccessor:
     def __init__(self, xarray_obj: xr.Dataset):
         self._obj = xarray_obj
 
-    def __call__(self, name: Optional[str] = None) -> DEMDataArrayAccessor:
+    def __call__(self, name: str | None = None) -> DEMDataArrayAccessor:
         """
         Get DEM accessor for a specific variable or auto-detect elevation variable.
 
@@ -190,14 +210,14 @@ class DEMDatasetAccessor:
 
         raise AttributeError("Could not id an elevation var. Try name='variable_name'")
 
-    def slope(self, **kwargs):
+    def slope(self, **kwargs: Any) -> xr.DataArray:
         """Compute slope. See DEMDataArrayAccessor.slope for details."""
         return self.__call__().slope(**kwargs)
 
-    def aspect(self, **kwargs):
+    def aspect(self, **kwargs: Any) -> xr.DataArray:
         """Compute aspect. See DEMDataArrayAccessor.aspect for details."""
         return self.__call__().aspect(**kwargs)
 
-    def hillshade(self, **kwargs):
+    def hillshade(self, **kwargs: Any) -> xr.DataArray:
         """Compute hillshade. See DEMDataArrayAccessor.hillshade for details."""
         return self.__call__().hillshade(**kwargs)

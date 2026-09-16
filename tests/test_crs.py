@@ -36,12 +36,14 @@ def test_projected_crs_no_z_factor(dem_factory):
     assert np.all(np.isfinite(slope))
 
 
-def test_explicit_z_factor_override(dem_factory):
-    """Test that explicit z_factor overrides CRS-based calculation"""
+def test_explicit_z_factor_is_vertical_exaggeration(dem_factory):
+    """z_factor scales elevation; explicit resolution skips degree-to-metre scaling"""
     da = dem_factory(shape=(5, 5), epsg="epsg:4326")
 
     slope_default = da.dem.slope(resolution=10.0)
-    slope_override = da.dem.slope(resolution=10.0, z_factor=1.0)
+    slope_one = da.dem.slope(resolution=10.0, z_factor=1.0)
+    slope_two = da.dem.slope(resolution=10.0, z_factor=2.0)
 
-    # Should be different (unless we're at equator)
-    assert not np.allclose(slope_default.values, slope_override.values)
+    np.testing.assert_allclose(slope_default.values, slope_one.values)
+    assert np.all(slope_two.values >= slope_one.values)
+    assert not np.allclose(slope_two.values, slope_one.values)

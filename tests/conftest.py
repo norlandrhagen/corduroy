@@ -174,3 +174,29 @@ def crs_strategy(draw):
             ]
         )
     )
+
+
+def _make_hill(n=41, sigma=8.0, peak=100.0):
+    """Gaussian hill, row 0 = first y coordinate."""
+    c = n // 2
+    yy, xx = np.mgrid[0:n, 0:n]
+    return peak * np.exp(-((xx - c) ** 2 + (yy - c) ** 2) / (2 * sigma**2))
+
+
+@pytest.fixture
+def make_hill():
+    return _make_hill
+
+
+@pytest.fixture(params=["descending", "ascending"])
+def hill_dem(request):
+    """North-up (descending y) or south-up (ascending y) projected hill DEM."""
+    n = 41
+    z = _make_hill(n)
+    y = np.arange(n, dtype=float)
+    if request.param == "descending":
+        y = y[::-1]
+    da = xr.DataArray(
+        z, coords={"y": y, "x": np.arange(n, dtype=float)}, dims=("y", "x")
+    )
+    return da.proj.assign_crs(spatial_ref="epsg:32612", allow_override=True)

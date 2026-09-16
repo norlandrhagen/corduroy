@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+import xarray as xr
 import xcorduroy  # noqa ignore
 
 
@@ -41,8 +43,12 @@ def test_pyramid_math(pyramid_dem):
     aspect = pyramid_dem.dem.aspect(resolution=1.0)
 
     assert slope.sel(x=3, y=2) > 0
-    assert aspect.sel(x=2, y=1) == 180.0
-    assert aspect.sel(x=2, y=3) == 0.0
+    # y ascends in the fixture, so y=1 is south of the peak: downslope is south.
+    np.testing.assert_allclose(aspect.sel(x=2, y=1), 180.0, atol=1e-3)
+    np.testing.assert_allclose(aspect.sel(x=2, y=3), 0.0, atol=1e-3)
+    np.testing.assert_allclose(aspect.sel(x=3, y=2), 90.0, atol=1e-3)
+    np.testing.assert_allclose(aspect.sel(x=1, y=2), 270.0, atol=1e-3)
+    assert np.isnan(aspect.sel(x=2, y=2))
 
 
 def test_dask_chunk_seams(dem_factory):
@@ -89,3 +95,108 @@ def test_negative_elevations(dem_factory):
 
     assert slope.shape == (5, 5)
     assert np.all(np.isfinite(slope))
+
+
+def _flanks(da, offset=8):
+    """{name: (y, x)} points on the flanks of a hill DEM. North is larger y."""
+    c = float(da.x.values[len(da.x) // 2])
+    d = round(offset * 0.7)
+    return {
+        "N": (c + offset, c),
+        "S": (c - offset, c),
+        "E": (c, c + offset),
+        "W": (c, c - offset),
+        "NW": (c + d, c - d),
+        "SE": (c - d, c + d),
+    }
+
+
+def _at(da, pt):
+    return float(da.sel(y=pt[0], x=pt[1]))
+
+
+def test_aspect_compass_convention(hill_dem):
+    """Aspect is downslope direction, clockwise from north, for either y order."""
+    aspect = hill_dem.dem.aspect()
+    f = _flanks(hill_dem)
+    expected = {"N": 0.0, "E": 90.0, "S": 180.0, "W": 270.0, "NW": 315.0, "SE": 135.0}
+    for name, want in expected.items():
+        got = _at(aspect, f[name])
+        assert abs((got - want + 180) % 360 - 180) < 1.0, (name, got, want)
+
+
+def test_hillshade_lit_from_azimuth(hill_dem):
+    f = _flanks(hill_dem)
+    hs_nw = hill_dem.dem.hillshade(azimuth=315, altitude=45)
+    hs_se = hill_dem.dem.hillshade(azimuth=135, altitude=45)
+
+    assert _at(hs_nw, f["NW"]) > 0.7
+    assert _at(hs_nw, f["SE"]) < 0.1
+    assert _at(hs_se, f["SE"]) > 0.7
+    assert _at(hs_se, f["NW"]) < 0.1
+
+
+def test_flat_surface(dem_factory):
+    da = dem_factory(shape=(6, 6), epsg="epsg:32612")
+    da.values[:] = 1200.0
+
+    assert np.isnan(da.dem.aspect().values).all()
+    np.testing.assert_allclose(da.dem.slope().values, 0.0)
+    np.testing.assert_allclose(
+        da.dem.hillshade(altitude=45).values, np.sin(np.deg2rad(45)), rtol=1e-6
+    )
+
+
+def test_geographic_scaling_is_anisotropic(make_hill):
+    """In EPSG:4326 a degree of longitude is shorter than a degree of latitude."""
+    n = 41
+    z = make_hill(n, sigma=8.0, peak=2000.0)
+    lat0 = 48.6
+    step = 0.001
+    lat = lat0 + step * np.arange(n)[::-1]
+    lon = -113.7 + step * np.arange(n)
+    geo = xr.DataArray(
+        z, coords={"lat": lat, "lon": lon}, dims=("lat", "lon")
+    ).proj.assign_crs(spatial_ref="epsg:4326", allow_override=True)
+
+    m_per_deg = 111320.0
+    proj = xr.DataArray(
+        z,
+        coords={
+            "y": lat * m_per_deg,
+            "x": lon * m_per_deg * np.cos(np.deg2rad(lat0)),
+        },
+        dims=("y", "x"),
+    ).proj.assign_crs(spatial_ref="epsg:32612", allow_override=True)
+
+    np.testing.assert_allclose(
+        geo.dem.slope().values, proj.dem.slope().values, rtol=1e-3, atol=1e-3
+    )
+    np.testing.assert_allclose(
+        geo.dem.aspect().values, proj.dem.aspect().values, rtol=1e-3, atol=1e-2
+    )
+    # E flank steeper than N flank by 1/cos(lat) because lon cells are shorter
+    c = n // 2
+    grad = np.tan(np.deg2rad(geo.dem.slope().values))
+    ratio = grad[c, c + 8] / grad[c - 8, c]
+    np.testing.assert_allclose(ratio, 1 / np.cos(np.deg2rad(lat0)), rtol=0.02)
+
+
+def test_coarse_projected_resolution_not_wrapped(dem_factory):
+    """Dateline wrap must not fire on projected coords with spacing > 180."""
+    da = dem_factory(shape=(8, 8), epsg="epsg:32612")
+    da = da.assign_coords(x=da.x.values * 250.0, y=da.y.values * 250.0)
+    np.testing.assert_allclose(
+        da.dem.slope().values, da.dem.slope(resolution=250.0).values
+    )
+
+
+def test_transposed_dims(hill_dem):
+    expected = hill_dem.dem.aspect()
+    got = hill_dem.transpose("x", "y").dem.aspect()
+    np.testing.assert_allclose(got.values, expected.values, equal_nan=True)
+
+
+def test_rejects_non_2d(hill_dem):
+    with pytest.raises(ValueError, match="2D"):
+        hill_dem.expand_dims("band").dem.slope()

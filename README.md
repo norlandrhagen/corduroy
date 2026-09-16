@@ -1,6 +1,6 @@
 # xCorduroy - Dask aware lightweight DEM utilities for Xarray
 
-`xcorduroy` is a lightweight (`dask`, `numpy`, `xarray` and `xproj`) Xarray accessor for library for calculating hillshade, slope angle and aspects from DEMs. 
+`xcorduroy` is a lightweight (`dask`, `numpy`, `xarray` and `xproj`) Xarray accessor for calculating hillshade, slope angle and aspects from DEMs. 
 
 **Warning: experimental**
 
@@ -58,7 +58,14 @@ plt.tight_layout()
 
 
 ### Methods
-The three current methods implemented are `.hillshade()`, `.slope()` and `.aspect()`.  The hillshade method is based off of the `Horn, 1981` method. Details can be found in `src/xcorduroy/DEM.py`. They are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
+The three current methods implemented are `.hillshade()`, `.slope()` and `.aspect()`. Gradients use the `Horn, 1981` 3x3 kernel; aspect and hillshade follow the ESRI/GDAL conventions and are validated against `gdaldem`. Details can be found in `src/xcorduroy/DEM.py`.
+
+Conventions:
+- `slope`: degrees, 0-90.
+- `aspect`: downslope direction in degrees clockwise from north, 0-360. Flat cells (e.g. hydro-flattened lakes) are `NaN`.
+- `hillshade`: 0-1, default light from azimuth 315 and altitude 45.
+- Array orientation (ascending or descending `y`) is detected from the coordinates.
+- For geographic CRSs (e.g. EPSG:4326) the degree spacing is converted to metres using the mean latitude of the array. This is fine for tiles, less so for continental extents. They are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
 
 ## Development
 
