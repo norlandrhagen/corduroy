@@ -1,7 +1,8 @@
+import numpy as np
 import pytest
 import xarray as xr
-import numpy as np
 import xproj  # noqa ignore
+
 import xcorduroy  # noqa ignore
 
 
@@ -47,3 +48,22 @@ def test_explicit_z_factor_is_vertical_exaggeration(dem_factory):
     np.testing.assert_allclose(slope_default.values, slope_one.values)
     assert np.all(slope_two.values >= slope_one.values)
     assert not np.allclose(slope_two.values, slope_one.values)
+
+
+def test_polar_longitude_scaling_is_clamped(dem_factory):
+    """Near a pole, cos(lat) collapses res_x; the clamp keeps slope sane and warns."""
+    da = dem_factory(shape=(5, 5), epsg="epsg:4326")
+    da = da.assign_coords(y=np.linspace(89.99, 90.0, 5), x=np.linspace(0.0, 0.01, 5))
+
+    with pytest.warns(RuntimeWarning, match="within 0.1 degrees of the pole"):
+        slope_polar = da.dem.slope()
+
+    # Same 0.01 degree span, mean latitude exactly at the 89.9 degree clamp.
+    da_clamp = da.assign_coords(y=np.linspace(89.895, 89.905, 5))
+    slope_clamp = da_clamp.dem.slope()
+
+    # The clamped polar array matches the 89.9 degree case rather than saturating.
+    np.testing.assert_allclose(
+        slope_polar.values, slope_clamp.values, rtol=1e-3, atol=1e-3
+    )
+    assert float(np.nanmax(slope_polar)) < 89.0

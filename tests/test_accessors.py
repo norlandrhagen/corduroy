@@ -1,6 +1,9 @@
+import numpy as np
 import pytest
 import xarray as xr
-import xcorduroy  # noqa ignore
+import xproj  # noqa: F401 - registers .proj accessor
+
+import xcorduroy  # noqa: F401 - registers .dem accessor
 
 
 def test_dataset_auto_discovery(synthetic_dem):
@@ -60,3 +63,17 @@ def test_dataset_all_vars_same_priority(dem_factory):
 
     with pytest.raises(ValueError, match="multiple variables found."):
         ds.dem.slope()
+
+
+def test_unrecognised_dims_raise_helpful_error():
+    da = xr.DataArray(
+        np.zeros((4, 4)),
+        coords={"row": np.arange(4.0), "col": np.arange(4.0)},
+        dims=("row", "col"),
+    ).proj.assign_crs(spatial_ref="epsg:32633", allow_override=True)
+
+    with pytest.raises(ValueError, match=r"Could not identify the .* dimension"):
+        da.dem.slope(resolution=10.0)
+
+    # Explicit names get past discovery.
+    assert da.dem.slope(x="col", y="row", resolution=10.0).shape == (4, 4)

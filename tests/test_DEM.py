@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+
 import xcorduroy  # noqa ignore
 
 
@@ -200,3 +201,34 @@ def test_transposed_dims(hill_dem):
 def test_rejects_non_2d(hill_dem):
     with pytest.raises(ValueError, match="2D"):
         hill_dem.expand_dims("band").dem.slope()
+
+
+@pytest.mark.parametrize("mode", ["slope", "aspect", "hillshade"])
+@pytest.mark.parametrize("chunks", [None, {"y": 5, "x": 5}])
+def test_nan_cell_masks_full_3x3(dem_factory, mode, chunks):
+    """A nodata cell must be NaN itself, not just its neighbours."""
+    da = dem_factory(shape=(9, 9), epsg="epsg:32612", chunks=chunks)
+    da = da.copy(data=da.values)
+    da.values[4, 4] = np.nan
+
+    out = getattr(da.dem, mode)().compute().values
+    assert np.isnan(out[3:6, 3:6]).all()
+    assert not np.isnan(out[0:3, 0:3]).any()
+
+
+def test_single_row_raises(dem_factory):
+    da = dem_factory(shape=(1, 8), epsg="epsg:32612")
+    with pytest.raises(ValueError, match="Cannot derive spacing along 'y'"):
+        da.dem.slope()
+
+
+def test_single_row_works_with_explicit_resolution(dem_factory):
+    da = dem_factory(shape=(1, 8), epsg="epsg:32612")
+    assert np.isfinite(da.dem.slope(resolution=1.0).values).all()
+
+
+@pytest.mark.parametrize("resolution", [(1.0,), (1.0, 2.0, 3.0)])
+def test_bad_resolution_tuple_raises(dem_factory, resolution):
+    da = dem_factory(shape=(5, 5), epsg="epsg:32612")
+    with pytest.raises(ValueError, match="scalar or a \\(y_res, x_res\\) pair"):
+        da.dem.slope(resolution=resolution)

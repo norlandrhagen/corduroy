@@ -1,8 +1,7 @@
-import pytest
 import numpy as np
+import pytest
 import xarray as xr
 import xproj  # noqa ignore
-import hypothesis.strategies as st
 
 
 def _apply_spatial_metadata(obj, epsg, x_name, y_name):
@@ -28,8 +27,7 @@ def dem_factory():
             name="elevation",
         )
 
-        da = da.rename({"x": x_name, "y": y_name})
-        da = da.proj.assign_crs(spatial_ref=epsg, allow_override=True)
+        da = _apply_spatial_metadata(da, epsg, x_name, y_name)
 
         return da.chunk(chunks) if chunks else da
 
@@ -83,97 +81,6 @@ def pyramid_dem(dem_factory):
     da = dem_factory(shape=(5, 5))
     da.values = data
     return da
-
-
-@st.composite
-def geographic_coords(draw, min_lat=-89, max_lat=89, min_lon=-179, max_lon=179):
-    """Generate geographic coord arrays"""
-    lat_start = draw(st.floats(min_value=min_lat, max_value=max_lat - 0.01))
-    lat_end = draw(st.floats(min_value=lat_start + 0.01, max_value=max_lat))
-
-    lon_start = draw(st.floats(min_value=min_lon, max_value=max_lon - 0.01))
-    lon_end = draw(st.floats(min_value=lon_start + 0.01, max_value=max_lon))
-
-    n_lats = draw(st.integers(min_value=5, max_value=20))
-    n_lons = draw(st.integers(min_value=5, max_value=20))
-
-    lats = np.linspace(lat_start, lat_end, n_lats)
-    lons = np.linspace(lon_start, lon_end, n_lons)
-
-    return lons, lats
-
-
-@st.composite
-def dem_with_nans(draw, min_size=5, max_size=20):
-    """Generate DEM with nan patterns"""
-    width = draw(st.integers(min_size, max_size))
-    height = draw(st.integers(min_size, max_size))
-
-    elevations = draw(
-        st.lists(
-            st.floats(-500, 8000), min_size=width * height, max_size=width * height
-        )
-    )
-
-    nan_fraction = draw(st.floats(0, 0.3))
-    n_nans = int(width * height * nan_fraction)
-
-    if n_nans > 0:
-        nan_indices = draw(
-            st.lists(
-                st.integers(0, width * height - 1),
-                min_size=n_nans,
-                max_size=n_nans,
-                unique=True,
-            )
-        )
-
-        for idx in nan_indices:
-            elevations[idx] = float("nan")
-
-    return np.array(elevations).reshape(height, width), height, width
-
-
-@st.composite
-def dem_data(draw, min_size=5, max_size=20, allow_nans=True):
-    """gen dem data"""
-    width = draw(st.integers(min_size, max_size))
-    height = draw(st.integers(min_size, max_size))
-
-    if allow_nans:
-        value_strategy = st.one_of(st.floats(-500, 8000), st.just(float("nan")))
-    else:
-        value_strategy = st.floats(-500, 8000)
-
-    elevations = draw(
-        st.lists(value_strategy, min_size=width * height, max_size=width * height)
-    )
-
-    return np.array(elevations).reshape(height, width), height, width
-
-
-@st.composite
-def valid_bbox(draw):
-    """Generate valid bounding boxes that don't cross dateline/poles... but should we check that?"""
-    min_lon = draw(st.floats(min_value=-180, max_value=179))
-    max_lon = draw(st.floats(min_value=min_lon + 0.1, max_value=180))
-    min_lat = draw(st.floats(min_value=-90, max_value=89))
-    max_lat = draw(st.floats(min_value=min_lat + 0.1, max_value=90))
-    return (min_lon, min_lat, max_lon, max_lat)
-
-
-@st.composite
-def crs_strategy(draw):
-    """crs opts"""
-    return draw(
-        st.sampled_from(
-            [
-                "epsg:4326",  # WEG84
-                "epsg:3857",  # web mercator
-                "epsg:32633",  # random UTM zone
-            ]
-        )
-    )
 
 
 def _make_hill(n=41, sigma=8.0, peak=100.0):

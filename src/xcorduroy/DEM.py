@@ -1,10 +1,21 @@
+import warnings
 from typing import Any
+
 import numpy as np
 import xarray as xr
-from .types import ModeType, Hillshade
+
+from .types import Hillshade, ModeType
 
 # Metres per degree of latitude (WGS84 mean).
 _M_PER_DEG = 111320.0
+
+# Floor on cos(latitude) when converting degrees of longitude to metres, at
+# 89.9 degrees. Without it a polar array collapses res_x toward zero and every
+# cell reads as a cliff.
+_MIN_COS_LAT = float(np.cos(np.deg2rad(89.9)))
+
+# Placeholder step for a length-1 coordinate: sign only, magnitude unusable.
+_UNKNOWN_STEP = 1.0
 
 
 def _terrain_kernel(
@@ -61,13 +72,19 @@ def _terrain_kernel(
 
     magnitude = np.hypot(dz_dx, dz_dy)
 
+    # The Horn kernel gives the centre cell weight 0, so a nodata cell never
+    # enters its own stencil. Propagate it explicitly, otherwise a NaN hole
+    # comes back as a ring of NaN around a finite, meaningless centre.
+    center_nan = np.isnan(z[1:-1, 1:-1])
+
     if mode == "slope":
-        return np.rad2deg(np.arctan(magnitude)).astype(np.float32)
+        slope = np.rad2deg(np.arctan(magnitude))
+        return np.where(center_nan, np.nan, slope).astype(np.float32)
 
     if mode == "aspect":
         # Compass bearing of the downslope vector (-dz_dx, -dz_dy).
         aspect = np.mod(np.rad2deg(np.arctan2(-dz_dx, -dz_dy)), 360.0)
-        aspect = np.where(magnitude == 0, np.nan, aspect)
+        aspect = np.where(center_nan | (magnitude == 0), np.nan, aspect)
         return aspect.astype(np.float32)
 
     zenith_rad = np.deg2rad(90.0 - altitude)
@@ -80,11 +97,17 @@ def _terrain_kernel(
         slope_rad
     ) * np.cos(az_math_rad - aspect_math_rad)
 
-    return np.clip(shaded, 0, 1).astype(np.float32)
+    return np.where(center_nan, np.nan, np.clip(shaded, 0, 1)).astype(np.float32)
 
 
-def _coord_step(coords: np.ndarray, wrap_360: bool) -> float:
-    """Signed median spacing of a 1D coordinate array."""
+def _coord_step(coords: np.ndarray, wrap_360: bool, dim: str) -> float:
+    """Signed median spacing of a 1D coordinate array.
+
+    A single coordinate carries no spacing; assume ascending so the caller can
+    still use the sign when ``resolution=`` was given explicitly.
+    """
+    if coords.size < 2:
+        return _UNKNOWN_STEP
     d = np.diff(coords.astype(float))
     if wrap_360:
         d = np.where(np.abs(d) > 180, d - 360 * np.sign(d), d)
@@ -108,7 +131,9 @@ def compute_terrain(
         mode: Terrain mode (Slope, Aspect, or Hillshade instance)
         resolution: Cell size as scalar or (y_res, x_res) in elevation units.
             Derived from coordinates if None. For geographic CRSs the degree
-            spacing is converted to metres using the mean latitude.
+            spacing is converted to metres using the mean latitude; within 0.1
+            degrees of a pole that scaling is clamped and a ``RuntimeWarning``
+            is raised.
         crs: pyproj-like CRS with ``is_geographic``. Used for degree-to-metre scaling
         x_dim: Name of x dimension
         y_dim: Name of y dimension
@@ -125,20 +150,43 @@ def compute_terrain(
     y_coords = da[y_dim].values
     is_geographic = bool(crs is not None and getattr(crs, "is_geographic", False))
 
-    dx = _coord_step(x_coords, wrap_360=is_geographic)
-    dy = _coord_step(y_coords, wrap_360=False)
+    dx = _coord_step(x_coords, wrap_360=is_geographic, dim=x_dim)
+    dy = _coord_step(y_coords, wrap_360=False, dim=y_dim)
     x_sign = -1.0 if dx < 0 else 1.0
     y_sign = -1.0 if dy < 0 else 1.0
 
     if resolution is None:
+        for dim, coords in ((y_dim, y_coords), (x_dim, x_coords)):
+            if coords.size < 2:
+                raise ValueError(
+                    f"Cannot derive spacing along {dim!r} from {coords.size} "
+                    "coordinate(s). Pass resolution= explicitly, or use a DEM "
+                    "with at least 2 cells per dimension."
+                )
         res_x, res_y = abs(dx), abs(dy)
         if is_geographic:
             mean_lat = float(np.mean(y_coords))
-            res_x *= _M_PER_DEG * np.cos(np.deg2rad(mean_lat))
+            cos_lat = float(np.cos(np.deg2rad(mean_lat)))
+            if cos_lat < _MIN_COS_LAT:
+                warnings.warn(
+                    f"Mean latitude {mean_lat:.4f} is within 0.1 degrees of the "
+                    "pole; longitude spacing is clamped to the 89.9 degree "
+                    "equivalent. Reproject to a polar CRS, or pass resolution=, "
+                    "for meaningful results.",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+                cos_lat = _MIN_COS_LAT
+            res_x *= _M_PER_DEG * cos_lat
             res_y *= _M_PER_DEG
     elif isinstance(resolution, (int, float)):
         res_y = res_x = abs(float(resolution))
     else:
+        if len(resolution) != 2:
+            raise ValueError(
+                f"resolution must be a scalar or a (y_res, x_res) pair, "
+                f"got {len(resolution)} values: {resolution!r}"
+            )
         res_y, res_x = abs(float(resolution[0])), abs(float(resolution[1]))
 
     kernel_kwargs = {

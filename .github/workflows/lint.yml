@@ -1,4 +1,4 @@
-name: Lint
+name: lint
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test:
+  lint:
 
     name: python
     runs-on: ubuntu-latest
@@ -25,7 +25,10 @@ jobs:
           enable-cache: true
 
       - name: Install the project
-        run: uv sync --locked --all-extras --dev
+        run: uv sync --all-groups
 
-      - name: Run linter (ty)
-        run: uv run ty check
+      - name: Run prek
+        run: uv run prek run --all-files
+
+      - name: Type check
+        run: uv run ty check src/

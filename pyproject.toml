@@ -4,15 +4,34 @@ version = "0.0.3"
 
 description = "Dask aware lightweight DEM utilities for Xarray"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Raphael Hagen", email = "norlandrhagen@gmail.com" }]
+keywords = ["dem", "terrain", "hillshade", "slope", "aspect", "xarray", "dask"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Typing :: Typed",
+]
 dependencies = [
-    "dask>=2025.12.0",
+    "dask>=2024.1.0",
     "numpy>=2.1.0",
-    "xarray>=2025.12.0",
+    "xarray>=2025.9.0",
     "xproj>=0.2.1",
 ]
 
-
+[project.urls]
+Homepage = "https://norlandrhagen.github.io/corduroy/"
+Documentation = "https://norlandrhagen.github.io/corduroy/"
+Repository = "https://github.com/norlandrhagen/corduroy"
+Issues = "https://github.com/norlandrhagen/corduroy/issues"
 
 [build-system]
 requires = ["uv_build>=0.9.18,<0.10.0"]
@@ -22,16 +41,22 @@ build-backend = "uv_build"
 dev = [
     "hypothesis>=6.148.8",
     "ipdb>=0.13.13",
-    "pre-commit>=4.5.1",
+    "prek>=0.5.2",
     "pytest>=9.0.2",
     "pytest-xdist>=3.8.0",
     "ruff>=0.14.10",
     "ty>=0.0.8",
 ]
+docs = [
+    "mkdocs-material>=9",
+    "mkdocstrings[python]>=0.25",
+]
 
+[tool.ruff]
+line-length = 88
 
-
-
+[tool.ruff.lint]
+extend-select = ["I"]
 
 [tool.ty.src]
 exclude = ["**/notebooks/"]
