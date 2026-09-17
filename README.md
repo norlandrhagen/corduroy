@@ -65,7 +65,11 @@ Conventions:
 - `aspect`: downslope direction in degrees clockwise from north, 0-360. Flat cells (e.g. hydro-flattened lakes) are `NaN`.
 - `hillshade`: 0-1, default light from azimuth 315 and altitude 45.
 - Array orientation (ascending or descending `y`) is detected from the coordinates.
-- For geographic CRSs (e.g. EPSG:4326) the degree spacing is converted to metres using the mean latitude of the array. This is fine for tiles, less so for continental extents. They are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
+- For geographic CRSs (e.g. EPSG:4326) the degree spacing is converted to metres using the mean latitude of the array. This is fine for tiles, less so for continental extents.
+- `resolution=` overrides coordinate spacing and must be in elevation units (metres); no degree conversion is applied.
+- `z_factor=` is a vertical exaggeration multiplier (default 1).
+
+The methods are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
 
 ## Development
 
