@@ -78,8 +78,10 @@ class DEMDataArrayAccessor:
         Args:
             x: X dimension name (auto-detected if None)
             y: Y dimension name (auto-detected if None)
-            resolution: Cell size or (y_res, x_res) tuple
-            **kwargs: Additional arguments (e.g., z_factor)
+            resolution: Cell size or (y_res, x_res) in elevation units. Derived
+                from coordinates if None (degrees converted to metres for
+                geographic CRSs)
+            **kwargs: Additional arguments (e.g., z_factor vertical exaggeration)
 
         Returns:
             DataArray with slope values in degrees
@@ -108,8 +110,10 @@ class DEMDataArrayAccessor:
         Args:
             x: X dimension name (auto-detected if None)
             y: Y dimension name (auto-detected if None)
-            resolution: Cell size or (y_res, x_res) tuple
-            **kwargs: Additional arguments (e.g., z_factor)
+            resolution: Cell size or (y_res, x_res) in elevation units. Derived
+                from coordinates if None (degrees converted to metres for
+                geographic CRSs)
+            **kwargs: Additional arguments (e.g., z_factor vertical exaggeration)
 
         Returns:
             DataArray with aspect values in degrees
@@ -140,10 +144,12 @@ class DEMDataArrayAccessor:
         Args:
             x: X dimension name (auto-detected if None)
             y: Y dimension name (auto-detected if None)
-            resolution: Cell size or (y_res, x_res) tuple
+            resolution: Cell size or (y_res, x_res) in elevation units. Derived
+                from coordinates if None (degrees converted to metres for
+                geographic CRSs)
             azimuth: Light source direction in degrees (0-360)
             altitude: Light source angle above horizon in degrees (0-90)
-            **kwargs: Additional arguments (e.g., z_factor)
+            **kwargs: Additional arguments (e.g., z_factor vertical exaggeration)
 
         Returns:
             DataArray with hillshade values (0-1)
