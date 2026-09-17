@@ -1,105 +1,68 @@
-# xCorduroy - Dask aware lightweight DEM utilities for Xarray
+# xcorduroy
 
-`xcorduroy` is a lightweight (`dask`, `numpy`, `xarray` and `xproj`) Xarray accessor for calculating hillshade, slope angle and aspects from DEMs. 
+**Dask aware lightweight DEM utilities for Xarray**
 
-**Warning: experimental**
+[Documentation](https://norlandrhagen.github.io/corduroy/) ·
+[Usage](https://norlandrhagen.github.io/corduroy/usage/) ·
+[Design](https://norlandrhagen.github.io/corduroy/design/) ·
+[API](https://norlandrhagen.github.io/corduroy/api/)
 
+`xcorduroy` is a small Xarray accessor for computing hillshade, slope and aspect
+from DEMs, with `dask`, `numpy`, `xarray` and `xproj` as its only dependencies.
+Gradients use the Horn (1981) 3x3 kernel; aspect and hillshade follow the
+ESRI/GDAL conventions (not numerically cross-checked against `gdaldem`). Chunked arrays are
+handled with a dask halo, so lazy and in-memory results are identical.
 
-## Usage
+> **Warning:** experimental. APIs may change without notice.
 
-#### Installation
+## Installation
 
-```python
+```bash
 uv add xcorduroy
-# or 
+# or
 pip install xcorduroy
 ```
 
-#### Notebooks
-An example notebook can be found in `notebooks/DEM_example.ipynb`
+## Example
 
-
-#### Example
 ```python
 import xarray as xr
-import xcorduroy # This is needed for the .dem accessor
-import xproj # This is needed for the .proj accessor
+import xproj    # registers the .proj accessor
+import xcorduroy  # registers the .dem accessor
 
-# Load a 2D Raster DEM
 ds = xr.open_dataset("DEM.zarr", engine="zarr", chunks="auto")
+ds = ds.proj.assign_crs(spatial_ref="EPSG:4326")
 
-# Make sure you have a crs registered
-ds = ds.proj.assign_crs("EPSG:4326")
-
-# Calculate hillshade. Note you can use the `dem` accessor.
-hillshade = ds['dem'].dem.hillshade()
-slope = ds['dem'].dem.slope()
-aspect = ds['dem'].dem.aspect()
-
-
-# Plotting
-fig, axes = plt.subplots(2, 2, figsize=(12, 10), sharex=True, sharey=True)
-
-ds['dem'].plot(ax=axes[0, 0], cmap='terrain', add_colorbar=True)
-axes[0, 0].set_title("Input DEM")
-
-slope.plot(ax=axes[0, 1], cmap='magma')
-axes[0, 1].set_title("Slope")
-
-aspect.plot(ax=axes[1, 0], cmap='twilight')
-axes[1, 0].set_title("Aspect")
-
-hillshade.plot(ax=axes[1, 1], cmap='gray')
-axes[1, 1].set_title("Hillshade")
-
-plt.tight_layout()
-
+slope = ds["dem"].dem.slope()          # degrees, 0-90
+aspect = ds["dem"].dem.aspect()        # degrees clockwise from north; flat cells NaN
+hillshade = ds["dem"].dem.hillshade()  # 0-1, light from azimuth 315 / altitude 45
 ```
 
+A plotted, runnable version is in `notebooks/DEM_example.ipynb`. See
+[Usage](https://norlandrhagen.github.io/corduroy/usage/) for `resolution=`,
+`z_factor=`, dimension naming and chunking, and
+[Design](https://norlandrhagen.github.io/corduroy/design/) for the conventions
+and the degree-to-metre approximation.
 
-### Methods
-The three current methods implemented are `.hillshade()`, `.slope()` and `.aspect()`. Gradients use the `Horn, 1981` 3x3 kernel; aspect and hillshade follow the ESRI/GDAL conventions and are validated against `gdaldem`. Details can be found in `src/xcorduroy/DEM.py`.
+## Scope
 
-Conventions:
-- `slope`: degrees, 0-90.
-- `aspect`: downslope direction in degrees clockwise from north, 0-360. Flat cells (e.g. hydro-flattened lakes) are `NaN`.
-- `hillshade`: 0-1, default light from azimuth 315 and altitude 45.
-- Array orientation (ascending or descending `y`) is detected from the coordinates.
-- For geographic CRSs (e.g. EPSG:4326) the degree spacing is converted to metres using the mean latitude of the array. This is fine for tiles, less so for continental extents.
-- `resolution=` overrides coordinate spacing and must be in elevation units (metres); no degree conversion is applied.
-- `z_factor=` is a vertical exaggeration multiplier (default 1).
-
-The methods are inspired by similar methods in `xdem` and `xarray-spatial`. If you are looking for well-validated functions for scientific analysis, check out either of them.  This library is a limited scope lightweight take on some of the methods, not a replacement. 
+The methods are inspired by `xdem` and `xarray-spatial`. If you need
+well-validated functions for scientific analysis, use one of those. This is a
+limited-scope, lightweight take on a few of the methods, not a replacement.
 
 ## Development
 
-This project uses `uv` for dependency management, `pytest` and `hypothesis` for testing,  `ty` for type-checking and `ruff` for linting. 
-
-
-### Sync development environment 
-
-```python
-uv sync --all-extras
+```bash
+uv sync --all-groups
+uv run pytest tests -n auto     # tests
+uv run ty check src/            # type check
+uv run prek run --all-files     # lint and format
+uv run mkdocs serve             # docs preview
 ```
 
+See [Contributing](https://norlandrhagen.github.io/corduroy/contributing/).
 
-### Run type checking
-```python
-uv run ty check 
-```
+## What's in the name
 
-### Run linter
-
-```python
-uv run pre-commit run all-files
-```
-
-### Run tests
-```
-uv run pytest tests/
-```
-
-
-#### What's in the name
-
-Corduroy is a textured snow surface left by groomers that forms regular peaks and valleys. 
+Corduroy is the textured snow surface left by groomers, regular peaks and
+valleys.

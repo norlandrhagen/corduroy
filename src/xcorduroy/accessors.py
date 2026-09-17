@@ -1,7 +1,9 @@
 from typing import Any, Hashable, Iterable
+
 import xarray as xr
+
 from .DEM import compute_terrain
-from .types import Slope, Aspect, Hillshade
+from .types import Aspect, Hillshade, Slope
 
 Resolution = float | int | tuple[float, float] | None
 
@@ -33,13 +35,31 @@ class DEMDataArrayAccessor:
 
         Returns:
             Tuple of (x_dim, y_dim) names
+
+        Raises:
+            ValueError: If a dimension is neither given nor recognised
         """
         x_options = ["x", "lon", "longitude", "long"]
         y_options = ["y", "lat", "latitude"]
 
         dims = self._obj.dims
-        final_x = x or next((str(d) for d in dims if _is_match(d, x_options)), "x")
-        final_y = y or next((str(d) for d in dims if _is_match(d, y_options)), "y")
+        final_x = x or next((str(d) for d in dims if _is_match(d, x_options)), None)
+        final_y = y or next((str(d) for d in dims if _is_match(d, y_options)), None)
+
+        if final_x is None or final_y is None:
+            missing = [
+                f"{axis} (looked for {', '.join(opts)})"
+                for axis, found, opts in (
+                    ("x", final_x, x_options),
+                    ("y", final_y, y_options),
+                )
+                if found is None
+            ]
+            raise ValueError(
+                f"Could not identify the {'; '.join(missing)} dimension in "
+                f"{tuple(dims)}. Name it explicitly, e.g. "
+                "da.dem.slope(x='col', y='row')."
+            )
 
         return final_x, final_y
 

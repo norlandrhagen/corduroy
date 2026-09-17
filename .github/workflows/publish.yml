@@ -44,4 +44,4 @@ jobs:
         run: uv run --isolated --no-project --with dist/*.tar.gz -- python -c "import xcorduroy; print(xcorduroy.__version__)"
       
       - name: Publish
-        run: uv publish
+        run: uv publish --check-url https://pypi.org/simple/
