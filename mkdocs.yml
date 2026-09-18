@@ -56,7 +56,6 @@ plugins:
 nav:
   - Home: index.md
   - Usage: usage.md
-  - Design: design.md
   - API Reference: api.md
   - Contributing: contributing.md
   - Release notes: releases.md

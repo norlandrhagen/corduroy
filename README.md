@@ -4,14 +4,10 @@
 
 [Documentation](https://norlandrhagen.github.io/corduroy/) ·
 [Usage](https://norlandrhagen.github.io/corduroy/usage/) ·
-[Design](https://norlandrhagen.github.io/corduroy/design/) ·
 [API](https://norlandrhagen.github.io/corduroy/api/)
 
 `xcorduroy` is a small Xarray accessor for computing hillshade, slope and aspect
 from DEMs, with `dask`, `numpy`, `xarray` and `xproj` as its only dependencies.
-Gradients use the Horn (1981) 3x3 kernel; aspect and hillshade follow the
-ESRI/GDAL conventions (not numerically cross-checked against `gdaldem`). Chunked arrays are
-handled with a dask halo, so lazy and in-memory results are identical.
 
 > **Warning:** experimental. APIs may change without notice.
 
@@ -41,7 +37,7 @@ hillshade = ds["dem"].dem.hillshade()  # 0-1, light from azimuth 315 / altitude 
 A plotted, runnable version is in `notebooks/DEM_example.ipynb`. See
 [Usage](https://norlandrhagen.github.io/corduroy/usage/) for `resolution=`,
 `z_factor=`, dimension naming and chunking, and
-[Design](https://norlandrhagen.github.io/corduroy/design/) for the conventions
+[API Reference](https://norlandrhagen.github.io/corduroy/api/) for conventions
 and the degree-to-metre approximation.
 
 ## Scope

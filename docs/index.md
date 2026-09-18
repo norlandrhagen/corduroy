@@ -39,8 +39,8 @@ slope = ds["dem"].dem.slope()
 aspect = ds["dem"].dem.aspect()
 ```
 
-See [Usage](usage.md) for the full worked example, [Design](design.md) for what
-the numbers mean, and the [API Reference](api.md) for signatures.
+See [Usage](usage.md) for the full worked example, and the
+[API Reference](api.md) for conventions and signatures.
 
 ## Scope
 
